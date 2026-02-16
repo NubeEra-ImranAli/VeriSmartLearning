@@ -25,8 +25,15 @@ import Animated, {
 } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { grades, STOP_COMMAND } from "@/constants/data";
+import { useBluetooth } from "@/lib/bluetooth-context";
 
-function PulsingDot({ color, isActive }: { color: string; isActive: boolean }) {
+function PulsingDot({
+  color,
+  isActive,
+}: {
+  color: string;
+  isActive: boolean;
+}) {
   const scale = useSharedValue(1);
 
   React.useEffect(() => {
@@ -51,11 +58,7 @@ function PulsingDot({ color, isActive }: { color: string; isActive: boolean }) {
 
   return (
     <Animated.View
-      style={[
-        styles.statusDot,
-        { backgroundColor: color },
-        animatedStyle,
-      ]}
+      style={[styles.statusDot, { backgroundColor: color }, animatedStyle]}
     />
   );
 }
@@ -69,50 +72,63 @@ export default function ProjectScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const { isConnected, device, sendCommand, error: btError } = useBluetooth();
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [lastCommand, setLastCommand] = useState<string | null>(null);
+  const [commandStatus, setCommandStatus] = useState<string | null>(null);
 
   const gId = parseInt(gradeId || "1", 10);
   const pId = parseInt(projectId || "1", 10);
   const grade = grades.find((g) => g.id === gId);
   const project = grade?.projects.find((p) => p.id === pId);
 
-  const sendBluetoothCommand = useCallback(
-    (command: string) => {
+  const handleSendCommand = useCallback(
+    async (command: string) => {
       setLastCommand(command);
-      const message =
-        command === STOP_COMMAND
-          ? `STOP command sent: ${command}`
-          : `Execute command sent: ${command}`;
+      const label = command === STOP_COMMAND ? "STOP" : "Execute";
 
-      if (Platform.OS === "web") {
-        console.log(`[BT Command] ${message}`);
+      if (isConnected) {
+        setCommandStatus(`Sending ${command}...`);
+        const success = await sendCommand(command);
+        if (success) {
+          setCommandStatus(`${label} command ${command} sent successfully`);
+        } else {
+          setCommandStatus(`Failed to send command ${command}`);
+        }
       } else {
-        Alert.alert(
-          command === STOP_COMMAND ? "Stopped" : "Executing",
-          `Bluetooth command: ${command}`,
-          [{ text: "OK" }]
+        setCommandStatus(
+          `${label} command ${command} ready (connect Bluetooth to send)`
         );
+        if (Platform.OS === "web") {
+          console.log(`[BT] ${label} command: ${command}`);
+        } else {
+          Alert.alert(
+            "No Bluetooth Device",
+            `Command ${command} is ready. Please connect a Bluetooth device from the home screen to send it.`,
+            [{ text: "OK" }]
+          );
+        }
       }
     },
-    []
+    [isConnected, sendCommand]
   );
 
-  const handleToggle = useCallback(() => {
+  const handleToggle = useCallback(async () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     }
 
     if (isExecuting) {
-      sendBluetoothCommand(STOP_COMMAND);
+      await handleSendCommand(STOP_COMMAND);
       setIsExecuting(false);
     } else {
       if (project) {
-        sendBluetoothCommand(project.command);
+        await handleSendCommand(project.command);
         setIsExecuting(true);
       }
     }
-  }, [isExecuting, project, sendBluetoothCommand]);
+  }, [isExecuting, project, handleSendCommand]);
 
   if (!grade || !project) {
     return (
@@ -133,7 +149,7 @@ export default function ProjectScreen() {
           <Pressable
             onPress={() => {
               if (isExecuting) {
-                sendBluetoothCommand(STOP_COMMAND);
+                handleSendCommand(STOP_COMMAND);
                 setIsExecuting(false);
               }
               if (Platform.OS !== "web") {
@@ -158,7 +174,7 @@ export default function ProjectScreen() {
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: bottomPadding + 140 },
+          { paddingBottom: bottomPadding + 160 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -189,16 +205,55 @@ export default function ProjectScreen() {
             </View>
             <Text style={styles.projectTitle}>{project.name}</Text>
             <View style={styles.commandBadge}>
-              <Ionicons
-                name="bluetooth"
-                size={14}
-                color={Colors.accent}
-              />
+              <Ionicons name="bluetooth" size={14} color={Colors.accent} />
               <Text style={styles.commandText}>
                 Command: {project.command}
               </Text>
             </View>
           </LinearGradient>
+        </Animated.View>
+
+        <Animated.View
+          entering={
+            Platform.OS !== "web"
+              ? FadeInDown.delay(150).springify()
+              : undefined
+          }
+        >
+          <View style={styles.btStatusCard}>
+            <Ionicons
+              name="bluetooth"
+              size={18}
+              color={isConnected ? Colors.accent : Colors.textMuted}
+            />
+            <View style={styles.btStatusTextCol}>
+              <Text
+                style={[
+                  styles.btStatusLabel,
+                  { color: isConnected ? Colors.accent : Colors.textMuted },
+                ]}
+              >
+                {isConnected
+                  ? `Connected: ${device?.name}`
+                  : "No device connected"}
+              </Text>
+              {!isConnected && (
+                <Text style={styles.btStatusHint}>
+                  Connect via Bluetooth on home screen
+                </Text>
+              )}
+            </View>
+            <View
+              style={[
+                styles.btStatusDot,
+                {
+                  backgroundColor: isConnected
+                    ? Colors.accent
+                    : Colors.textMuted,
+                },
+              ]}
+            />
+          </View>
         </Animated.View>
 
         <Animated.View
@@ -222,10 +277,7 @@ export default function ProjectScreen() {
               return (
                 <View
                   key={i}
-                  style={[
-                    styles.procedureLine,
-                    isStep && styles.stepLine,
-                  ]}
+                  style={[styles.procedureLine, isStep && styles.stepLine]}
                 >
                   {isStep && (
                     <View
@@ -252,25 +304,23 @@ export default function ProjectScreen() {
           </View>
         </Animated.View>
 
-        {lastCommand && (
-          <Animated.View
-            entering={
-              Platform.OS !== "web"
-                ? FadeInDown.delay(50).springify()
-                : undefined
-            }
-          >
-            <View style={styles.logCard}>
-              <Ionicons
-                name="terminal"
-                size={16}
-                color={Colors.textSecondary}
-              />
-              <Text style={styles.logText}>
-                Last command: {lastCommand}
-              </Text>
-            </View>
-          </Animated.View>
+        {(commandStatus || btError) && (
+          <View style={styles.logCard}>
+            <Ionicons
+              name={btError ? "warning" : "terminal"}
+              size={16}
+              color={btError ? Colors.stop : Colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.logText,
+                btError ? { color: Colors.stop } : null,
+              ]}
+              numberOfLines={2}
+            >
+              {btError || commandStatus}
+            </Text>
+          </View>
         )}
       </ScrollView>
 
@@ -290,11 +340,18 @@ export default function ProjectScreen() {
           <Text
             style={[
               styles.statusText,
-              { color: isExecuting ? Colors.execute : Colors.textSecondary },
+              {
+                color: isExecuting ? Colors.execute : Colors.textSecondary,
+              },
             ]}
           >
             {isExecuting ? "Running" : "Ready"}
           </Text>
+          {lastCommand && (
+            <Text style={styles.lastCmdText}>
+              Last: {lastCommand}
+            </Text>
+          )}
         </View>
 
         <Pressable
@@ -381,7 +438,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -415,13 +472,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.accent,
   },
+  btStatusCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 10,
+  },
+  btStatusTextCol: {
+    flex: 1,
+  },
+  btStatusLabel: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 13,
+  },
+  btStatusHint: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  btStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
   sectionLabel: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 14,
     color: Colors.textSecondary,
     marginBottom: 12,
     letterSpacing: 0.5,
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
   },
   procedureCard: {
     backgroundColor: Colors.surface,
@@ -485,6 +571,7 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_400Regular",
     fontSize: 13,
     color: Colors.textSecondary,
+    flex: 1,
   },
   bottomBar: {
     position: "absolute",
@@ -495,7 +582,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 14,
   },
   statusRow: {
     flexDirection: "row",
@@ -512,6 +599,12 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: "Poppins_500Medium",
     fontSize: 13,
+  },
+  lastCmdText: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginLeft: 8,
   },
   toggleButton: {
     borderRadius: 16,
