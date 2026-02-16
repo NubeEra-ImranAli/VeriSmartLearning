@@ -1,0 +1,49 @@
+I want to make a School App for my Learning Device
+it will be Multiple Screen App
+on First Screen Home Where My Company Name : VeriTon and my Device name : VeriSmart will be Display at Top
+at this Screen I need 4 atractive buttons with differ colors as
+Grade 1, Grade 2, Grade 3, Grade 4
+When I click Grade 1 then in Next Screen Grade 1 Project List will Appears (which will be clickable), 
+When I click Grade 2 then in Next Screen Grade 2 Project List will Appears (which will be clickable), 
+When I click Grade 3 then in Next Screen Grade 3 Project List will Appears (which will be clickable), 
+When I click Grade 4 then in Next Screen Grade 4 Project List will Appears (which will be clickable), 
+When i Click on that Project then Procedure of that Project screen will appear, along with Start / Stop Button (toggle caption)
+here is the list of my Project list
+here is the grade 1 to 4 Project List Grade Activities Grade 1 1. LED ON/OFF using button. 2. Touch-based light control. 3. Blinking LED pattern. 4. Automatic night lamp using LDR. 5. Touch-based smart buzzer. 6. Smart doorbell system. Grade 2 1. Button-controlled LED system. 2. LED pattern controller. 3. Motor rotation pattern. 4. Automatic light using LDR. 5. Touch-based smart alarm. 6. Sound-activated alert system. Grade 3 1. Timed LED control system. 2. Delay-based buzzer system. 3. Automatic fan using temperature. 4. Obstacle alert system. 5. Smart distance warning system. 6. Automatic water level alert. Grade 4 1. Multi-input LED system. 2. Smart control panel. 3. Sensor-based smart switch. 4. Smart light + alarm system. 5. Intelligent alert system. 6. Smart traffic control system.
+
+also when i will click Execute / Stop button  then one blueTooth Command will be send here is the list of that commands
+📘 GRADE 1 COMMANDS
+Project	Activity	APK Command
+1	LED ON/OFF using button	101
+2	Touch-based light control	102
+3	Blinking LED pattern	103
+4	Automatic night lamp using LDR	104
+5	Touch-based smart buzzer	105
+6	Smart doorbell system	106
+📗 GRADE 2 COMMANDS
+Project	Activity	APK Command
+1	Button-controlled LED system	201
+2	LED pattern controller	202
+3	Motor rotation pattern	203
+4	Automatic light using LDR	204
+5	Touch-based smart alarm	205
+6	Sound-activated alert system	206
+📙 GRADE 3 COMMANDS
+Project	Activity	APK Command
+1	Timed LED control system	301
+2	Delay-based buzzer system	302
+3	Automatic fan using temperature	303
+4	Obstacle alert system	304
+5	Smart distance warning system	305
+6	Automatic water level alert	306
+📕 GRADE 4 COMMANDS
+Project	Activity	APK Command
+1	Multi-input LED system	401
+2	Smart control panel	402
+3	Sensor-based smart switch	403
+4	Smart light + alarm system	404
+5	Intelligent alert system	405
+6	Smart traffic control system	406
+🛑 GLOBAL COMMANDS
+Function	Command
+STOP ALL	000
